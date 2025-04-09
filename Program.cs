@@ -1,11 +1,12 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Text;
+using System.Text.RegularExpressions;
 
 const string MSYS2_bin = @"c:\msys64\usr\bin";
 
 Console.OutputEncoding = Encoding.GetEncoding("utf-8");
 
-static bool execSubProc(ProcessStartInfo psi, out string stdout)
+static int execSubProc(ProcessStartInfo psi, out string stdout)
 {
     psi.UseShellExecute = false;
     psi.RedirectStandardOutput = true;
@@ -19,7 +20,7 @@ static bool execSubProc(ProcessStartInfo psi, out string stdout)
         using var proc = Process.Start(psi);
         if (proc == null)
         {
-            return false;
+            return 1;
         }
 
         stdout = proc.StandardOutput.ReadToEnd();
@@ -27,12 +28,14 @@ static bool execSubProc(ProcessStartInfo psi, out string stdout)
 
         if (!proc.WaitForExit(10 * 1000))
         {
-            return false;
+            proc.Kill();
+            return 1;
         }
+        return proc.ExitCode;
     }
     catch
     {
-        return false;
+        return 1;
     }
     finally
     {
@@ -41,37 +44,39 @@ static bool execSubProc(ProcessStartInfo psi, out string stdout)
             Console.Error.Write(stderr);
         }
     }
-
-    return true;
 }
 
 string gitOut = "";
+ProcessStartInfo gitProcInfo = new();
 if (args.Any(arg => arg == "stash"))
 {
-    var gitProcInfo = new ProcessStartInfo(Path.Combine(MSYS2_bin, "bash"))
-    {
-        Arguments = $"--login -c 'git {string.Join(" ", args)}'"
-    };
+    gitProcInfo.FileName = Path.Combine(MSYS2_bin, "bash");
+    gitProcInfo.Arguments = $"--login -c 'git {string.Join(" ", args)}'";
     gitProcInfo.EnvironmentVariables.Add("MSYSTEM", "MSYS");
     gitProcInfo.EnvironmentVariables.Add("CHERE_INVOKING", "1");
-
-    if (!execSubProc(gitProcInfo, out gitOut))
-    {
-        Environment.Exit(1);
-    }
 }
 else
 {
-    var gitProcInfo = new ProcessStartInfo(Path.Combine(MSYS2_bin, "git"));
-    foreach (var arg in args)
+    gitProcInfo = new ProcessStartInfo(Path.Combine(MSYS2_bin, "git"));
+    if (args.Any(arg => arg == "log"))
     {
-        gitProcInfo.ArgumentList.Add(arg);
+        foreach (var arg in args)
+        {
+            gitProcInfo.ArgumentList.Add(Regex.Replace(arg, @"{(.*)}", @"\{$1\}"));
+        }
     }
-
-    if (!execSubProc(gitProcInfo, out gitOut))
+    else
     {
-        Environment.Exit(1);
+        foreach (var arg in args)
+        {
+            gitProcInfo.ArgumentList.Add(arg);
+        }
     }
+}
+int exitCode = execSubProc(gitProcInfo, out gitOut);
+if (exitCode != 0)
+{
+    Environment.Exit(exitCode);
 }
 
 if (args.All(arg => arg != "rev-parse" && arg != "ls-files"))
@@ -87,7 +92,7 @@ try
     var gitOutFixed = string.Join(" ", gitOutElems.Select(elem =>
     {
         cygpathProcInfo.Arguments = $"-w {elem}";
-        return execSubProc(cygpathProcInfo, out var cygpathOut) ? cygpathOut : throw new Exception();
+        return execSubProc(cygpathProcInfo, out var cygpathOut) == 0 ? cygpathOut : throw new Exception();
     }));
 
     Console.Write(gitOutFixed);
