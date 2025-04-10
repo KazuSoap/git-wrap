@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -48,7 +48,7 @@ static int execSubProc(ProcessStartInfo psi, out string stdout)
 
 string gitOut = "";
 ProcessStartInfo gitProcInfo = new();
-if (args.Any(arg => arg == "stash"))
+if (args.Any(arg => arg == "stash" || arg == "fetch" || arg == "pull"))
 {
     gitProcInfo.FileName = Path.Combine(MSYS2_bin, "bash");
     gitProcInfo.Arguments = $"--login -c 'git {string.Join(" ", args)}'";
