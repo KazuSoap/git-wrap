@@ -48,7 +48,7 @@ static int execSubProc(ProcessStartInfo psi, out string stdout)
 
 string gitOut = "";
 ProcessStartInfo gitProcInfo = new();
-if (args.Any(arg => arg == "stash" || arg == "fetch" || arg == "pull"))
+if (args.Any(arg => arg == "stash" || arg == "fetch" || arg == "pull" || arg == "push"))
 {
     gitProcInfo.FileName = Path.Combine(MSYS2_bin, "bash");
     gitProcInfo.Arguments = $"--login -c 'git {string.Join(" ", args)}'";
