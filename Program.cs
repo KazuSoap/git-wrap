@@ -1,7 +1,5 @@
 ﻿using System.Diagnostics;
-using System.IO.Pipes;
 using System.Text;
-using System.Text.RegularExpressions;
 
 internal class Program
 {
