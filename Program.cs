@@ -3,6 +3,8 @@ using System.Text;
 
 internal class Program
 {
+    internal static readonly char[] separator = new[] { ' ', '\t' };
+
     private static void Main(string[] args)
     {
         Console.OutputEncoding = Encoding.GetEncoding("utf-8");
@@ -28,7 +30,7 @@ internal class Program
         // msys2 git では一部コマンド出力のパス形式が unix 形式 のため、
         // cygpath を使って windows 形式のパスに変換する
         var cygpathProc = new SubProc("cygpath");
-        var gitOutElems = gitOut.Split(' ', '\t', StringSplitOptions.RemoveEmptyEntries);
+        var gitOutElems = gitOut.Split(separator, StringSplitOptions.RemoveEmptyEntries);
         try
         {
             var gitOutFixed = string.Join(" ", gitOutElems.Select(elem =>
@@ -110,14 +112,14 @@ internal class SubProc
             // タイムアウトを設定せず終了を待つ
             proc.WaitForExit();
 
-            if (File.Exists($"{AppDomain.CurrentDomain.BaseDirectory}/log.txt"))
-            {
-                // コマンドラインと実行結果のファイル出力
-                var args = string.IsNullOrEmpty(psi.Arguments) ? string.Join(" ", psi.ArgumentList) : psi.Arguments;
-                File.AppendAllText($"{AppDomain.CurrentDomain.BaseDirectory}/log.txt", $"command > {psi.FileName} {args}\n\n");
-                File.AppendAllText($"{AppDomain.CurrentDomain.BaseDirectory}/log.txt", $"stdout  > {new string(stdout)}\n\n");
-                File.AppendAllText($"{AppDomain.CurrentDomain.BaseDirectory}/log.txt", $"stderr  > {new string(stderr)}\n\n");
-            }
+            // if (File.Exists($"{AppDomain.CurrentDomain.BaseDirectory}/log.txt"))
+            // {
+            //     // コマンドラインと実行結果のファイル出力
+            //     var args = string.IsNullOrEmpty(psi.Arguments) ? string.Join(" ", psi.ArgumentList) : psi.Arguments;
+            //     File.AppendAllText($"{AppDomain.CurrentDomain.BaseDirectory}/log.txt", $"command > {psi.FileName} {args}\n\n");
+            //     File.AppendAllText($"{AppDomain.CurrentDomain.BaseDirectory}/log.txt", $"stdout  > {new string(stdout)}\n\n");
+            //     File.AppendAllText($"{AppDomain.CurrentDomain.BaseDirectory}/log.txt", $"stderr  > {new string(stderr)}\n\n");
+            // }
 
             return proc.ExitCode;
         }
