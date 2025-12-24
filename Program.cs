@@ -3,7 +3,7 @@ using System.Text;
 
 internal class Program
 {
-    internal static readonly char[] separator = new[] { ' ', '\t' };
+    internal static readonly char[] separator = [' ', '\t'];
 
     private static void Main(string[] args)
     {
