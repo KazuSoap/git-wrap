@@ -105,8 +105,10 @@ internal class SubProc
                 return 1;
             }
 
-            stdout = proc.StandardOutput.ReadToEnd();
-            stderr = proc.StandardError.ReadToEnd();
+            var stdoutTask = proc.StandardOutput.ReadToEndAsync();
+            var stderrTask = proc.StandardError.ReadToEndAsync();
+            stdout = stdoutTask.GetAwaiter().GetResult();
+            stderr = stderrTask.GetAwaiter().GetResult();
 
             // git & cygpath コマンドはハングしないという希望的観測により
             // タイムアウトを設定せず終了を待つ
