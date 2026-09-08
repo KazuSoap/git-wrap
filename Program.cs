@@ -31,18 +31,34 @@ internal class Program
         var gitOutLines = gitOut.Split('\n');
         try
         {
-            var gitOutFixed = string.Join("\n", gitOutLines.Select(line =>
-            {
-                var trimmed = line.TrimEnd('\r');
-                if (trimmed.Length == 0)
-                {
-                    return line;
-                }
-                cygpathProc.RawArgumentList = ["-w", trimmed];
-                return cygpathProc.Exec(out var cygpathOut) == 0 ? cygpathOut.TrimEnd('\r', '\n') : throw new Exception();
-            }));
+            var resultLines = (string[])gitOutLines.Clone();
+            var targets = gitOutLines
+                .Select((line, i) => (trimmed: line.TrimEnd('\r'), i))
+                .Where(t => t.trimmed.Length > 0)
+                .ToArray();
 
-            Console.Write(gitOutFixed);
+            if (targets.Length > 0)
+            {
+                // 行ごとに cygpath プロセスを起動すると N 回起動になり著しく遅いため、1 回の起動にまとめて渡す
+                cygpathProc.RawArgumentList = ["-w", .. targets.Select(t => t.trimmed)];
+                if (cygpathProc.Exec(out var cygpathOut) != 0)
+                {
+                    throw new Exception();
+                }
+
+                var convertedLines = cygpathOut.TrimEnd('\r', '\n').Split('\n');
+                if (convertedLines.Length != targets.Length)
+                {
+                    throw new Exception();
+                }
+
+                for (int i = 0; i < targets.Length; i++)
+                {
+                    resultLines[targets[i].i] = convertedLines[i].TrimEnd('\r');
+                }
+            }
+
+            Console.Write(string.Join("\n", resultLines));
         }
         catch
         {

@@ -41,12 +41,10 @@
       "command": "dotnet",
       "type": "process",
       "args": [
-        "build",
+        "publish",
         "${workspaceFolder}/git-wrap.csproj",
-        "-p:Platform=\"Any CPU\"",
         "-p:GenerateFullPaths=true",
         "-clp:Summary;ForceNoAlign",
-        "--no-incremental",
         "-c",
         "Release"
       ],
