@@ -3,8 +3,6 @@ using System.Text;
 
 internal class Program
 {
-    internal static readonly char[] separator = [' ', '\t'];
-
     private static void Main(string[] args)
     {
         Console.OutputEncoding = Encoding.GetEncoding("utf-8");
@@ -21,7 +19,7 @@ internal class Program
             Environment.Exit(exitCode);
         }
 
-        if (args.All(arg => arg != "rev-parse" && arg != "ls-files"))
+        if (args.All(arg => arg != "rev-parse"))
         {
             Console.Write(gitOut);
             Environment.Exit(0);
@@ -30,13 +28,18 @@ internal class Program
         // msys2 git では一部コマンド出力のパス形式が unix 形式 のため、
         // cygpath を使って windows 形式のパスに変換する
         var cygpathProc = new SubProc("cygpath");
-        var gitOutElems = gitOut.Split(separator, StringSplitOptions.RemoveEmptyEntries);
+        var gitOutLines = gitOut.Split('\n');
         try
         {
-            var gitOutFixed = string.Join(" ", gitOutElems.Select(elem =>
+            var gitOutFixed = string.Join("\n", gitOutLines.Select(line =>
             {
-                cygpathProc.Arguments = $"-w {elem}";
-                return cygpathProc.Exec(out var cygpathOut) == 0 ? cygpathOut : throw new Exception();
+                var trimmed = line.TrimEnd('\r');
+                if (trimmed.Length == 0)
+                {
+                    return line;
+                }
+                cygpathProc.RawArgumentList = ["-w", trimmed];
+                return cygpathProc.Exec(out var cygpathOut) == 0 ? cygpathOut.TrimEnd('\r', '\n') : throw new Exception();
             }));
 
             Console.Write(gitOutFixed);
@@ -62,12 +65,13 @@ internal class SubProc
     {
         set
         {
+            psi.ArgumentList.Clear();
             foreach (var arg in value)
             {
                 // 中括弧はエスケープ必要
                 psi.ArgumentList.Add(arg.Replace(@"{", @"\{").Replace(@"}", @"\}"));
-                psi.Arguments = string.Empty;
             }
+            psi.Arguments = string.Empty;
         }
     }
 
@@ -77,6 +81,19 @@ internal class SubProc
         {
             psi.Arguments = value;
             psi.ArgumentList.Clear();
+        }
+    }
+
+    public string[] RawArgumentList
+    {
+        set
+        {
+            psi.ArgumentList.Clear();
+            foreach (var arg in value)
+            {
+                psi.ArgumentList.Add(arg);
+            }
+            psi.Arguments = string.Empty;
         }
     }
 
@@ -90,7 +107,7 @@ internal class SubProc
             CreateNoWindow = true,
         };
         psi.EnvironmentVariables["PATH"] = envPath;
-        psi.EnvironmentVariables.Add("HOME", MSYS2_home);
+        psi.EnvironmentVariables["HOME"] = MSYS2_home;
     }
 
     public int Exec(out string stdout)
